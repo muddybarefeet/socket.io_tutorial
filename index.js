@@ -8,14 +8,32 @@ app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');
 });
 
-var clients = [];
+var connectedUsers = {};
+var clientIdsCurrent;
 
 //open a connection to sockets
 io.on('connection', function(socket){
 
   // client.broadcast.emit('connected', name + " has connected");
   socket.on('join', function(name) {
-    clients.push(name);//add the users name to the array of names
+    //save the new users name in the hash with the user value
+    io.clients(function(error, clients){
+      if (error) {
+        console.log('error getting connected users');
+      }
+      // connectedUsers[clients] = name;//add the users name to the array of names
+      var oldUsers = Object.keys(connectedUsers);
+
+      for (var i = 0; i < clients.length; i++) {
+        if (oldUsers.indexOf(clients[i]) === -1) {//if the index is not in clients
+          connectedUsers[clients[i]] = name;
+        }
+      }
+
+      console.log('connected users NOW', connectedUsers);
+    });
+
+    console.log('name added', name);
     socket.broadcast.emit('newUserJoin', name + " has connected");
    });
 
@@ -35,13 +53,40 @@ io.on('connection', function(socket){
     socket.broadcast.emit('notTyping');
   });
 
-  socket.on('usersOnlineCheck', function () {
-    console.log('button clicked to see other users online', io.sockets.clients());
+  socket.on('usersOnlineCheck', function (name) {
+    console.log('connected users on check', connectedUsers);
+    // var sessionID;
+    var toSendToClient = [];
+
+    //take the name and find the id
+    for (var key in connectedUsers) {
+      if (connectedUsers[key] !== name) {
+        // sessionID = key;
+        toSendToClient.push(connectedUsers[key]);
+      }
+    }
+    // io.clients[sessionID].send(connectedUsers);
+    socket.emit('userOnline', toSendToClient);
+
   });
 
+
   socket.on('disconnect', function () {
-    console.log('user disconnected');
-    // clients.splice(clients.indexOf(name), 1); //remove the username to show that the user is not here anymore
+
+    io.clients(function(error, clients){
+      if (error) {
+        console.log('error getting connected users');
+      }
+      var oldClients = Object.keys(connectedUsers);
+      for (var i = 0; i < oldClients.length; i++) {
+        if (clients.indexOf(oldClients[i]) === -1) {//if the index is not in clients
+          delete connectedUsers[oldClients[i]];
+        }
+      }
+
+    });
+
+
   });
 
 });
