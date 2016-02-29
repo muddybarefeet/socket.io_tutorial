@@ -8,41 +8,45 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
     
     <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font: 13px Helvetica, Arial; }
-      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
-      form input { border: 0; padding: 10px; margin-right: .5%; }
-      .input { border-left: 7px solid black}
-      .edge { width: 20%; border-left: 3px solid black }
-      .message { width:70%;}
-      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
-      #messages { list-style-type: none; margin: 0; padding: 0; }
-      #messages li { padding: 5px 10px; }
-      #messages li:nth-child(odd) { background: #eee; }
-    </style>
+       * { margin: 0; padding: 0; box-sizing: border-box; }
+       body { font: 13px Helvetica, Arial; }
+       form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+       form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+       form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+       #messages { list-style-type: none; margin: 0; padding: 0; }
+       #messages li { padding: 5px 10px; }
+       #messages li:nth-child(odd) { background: #eee; }
+     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.4.5/socket.io.min.js"></script>
   </head>
 
   <body>
     <p id="status" ></p>
-    <ul id="messages"></ul>
-    <form action="">
-      <input class="input message" id="m" autocomplete="off" /><button>Send</button><input class="input edge name" id="p" placeholder="Enter your name here" autocomplete="off" />
+    <ul id="messages" class="msgList"></ul>
+
+    <button class="who-is-online">Who is online?</button>
+    <ul class="online-users"></ul>
+  
+    <form class="messageBar" action="">
+      <input id="m" class="message-text" autocomplete="off" /><button class="send">Send</button>
     </form>
   
     <!-- load the socket.io-client which exposes a io global, and then connect -->
     <script>
       var socket = io();
+      var name;
+      var typing = false;
+      var timeout;
 
-      $('form').submit(function(){
-        // $('#messages').append($('<li>').text($('#m').val()));
-        socket.emit('chat message', $('#p').val() + ': ' + $('#m').val());
+      $('form').submit(function (){
+        $('#messages').append($('<li>').text( name + ': ' + $('#m').val()));
+        socket.emit('chat message', name + ': ' + $('#m').val());
         $('#m').val('');
         return false;
       });
 
       //stop enter sending the name input to the board
-      $('.name').keydown(function(event){
+      $('.name').keydown(function (event){
         if(event.keyCode == 13) {
           $('.name').css('background-color','beige');
           event.preventDefault();
@@ -50,20 +54,64 @@
         }
       });
 
-      socket.on('chat message', function(msg){
+      socket.on('chat message', function (msg){
         $('#messages').append($('<li>').text(msg));
       });
 
 
-      socket.on('connect', function(data) {
-        var name = prompt('What is your name?');
+      socket.on('connect', function (data) {
+        // name = prompt('What is your name?');
         $('#status').html('Connected to Chat as ' + name);
         socket.emit('join', name);
       });
 
-      socket.on('kkk', function(data) {
+      socket.on('newUserJoin', function (data) {
         $('<li>'+data+'</li>').appendTo('#messages');
       });
+
+      socket.on('typingMessage', function (data) {
+        $('<li class="typingMsg">'+data+'</li>').appendTo('#messages');
+      });
+
+      socket.on('notTyping', function () {
+        //remove anything with the class to typing
+        console.log('removing message that typing');
+        $('.typingMsg').remove();
+      });
+
+      var timeOutFn = function () {
+        console.log('fin typing')
+        typing = false;
+        socket.emit('notTyping');
+      };
+
+      $('.message-text').keyup(function (e) {
+
+        if (e.which !== 13) {//enter key
+          if (typing === false) { //if there was no typing happening make var true
+            typing = true;
+            socket.emit('typingMessage', name); //emit typing event
+          }
+        } if (e.which === 13 | $('.message-text').val() === "") {//clear the typing message of the box is made empty or the enter key is hit(message sent) this might need to be revised(Might want to make paragraphs)
+          if (typing === true) {
+            timeOutFn(); //set a timeout function for when to stop typing
+          }
+        }
+        //also can be cleared if the box has been unfocused from
+        $('input').blur(function () {
+          if (typing === true) {
+             timeOutFn(); //set a timeout function for when to stop typing
+           }
+        });
+
+      });
+
+      $('.who-is-online').on('click', function () {
+        //on click show a list of who is online
+        socket.emit('usersOnlineCheck');
+      });
+
+
 
    
     </script>
