@@ -21,19 +21,14 @@ io.on('connection', function(socket){
       if (error) {
         console.log('error getting connected users');
       }
-      // connectedUsers[clients] = name;//add the users name to the array of names
       var oldUsers = Object.keys(connectedUsers);
-
+      //look through the clients and see which one not in the old users and add this and the name to connected users
       for (var i = 0; i < clients.length; i++) {
         if (oldUsers.indexOf(clients[i]) === -1) {//if the index is not in clients
           connectedUsers[clients[i]] = name;
         }
       }
-
-      console.log('connected users NOW', connectedUsers);
     });
-
-    console.log('name added', name);
     socket.broadcast.emit('newUserJoin', name + " has connected");
    });
 
@@ -54,7 +49,6 @@ io.on('connection', function(socket){
   });
 
   socket.on('usersOnlineCheck', function (name) {
-    console.log('connected users on check', connectedUsers);
     // var sessionID;
     var toSendToClient = [];
 
@@ -69,7 +63,6 @@ io.on('connection', function(socket){
     socket.emit('userOnline', toSendToClient);
 
   });
-
 
   socket.on('disconnect', function () {
 

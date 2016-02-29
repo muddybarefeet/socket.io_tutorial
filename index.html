@@ -111,11 +111,11 @@
       });
 
       socket.on('userOnline', function(data) {
-        console.log('user online data client', data);
         for (var key in data) {
-          console.log(data[key])
           if (data[key] !== name) {
-            $('.online-users').append($('<li><a></a></li>').text(data[key]))
+            //append all to the page if not the user themselves
+            $('.online-users').append($('<li class="privateMessage"></li>').text(data[key]))
+
           }
         }
        
